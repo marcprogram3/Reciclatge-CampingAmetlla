@@ -1,0 +1,9 @@
+<section id="search" class="mb-8 card relative">
+  <h2 class="text-2xl font-semibold mb-6">Consulta el teu residu</h2>
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="Ex.: ampolla de plàstic, piles, paper" class="p-3 border border-gray-300 rounded-lg w-full sm:w-2/3 focus:outline-none focus:ring-[#1B5E20]" oninput="showSuggestions()">
+    <button onclick="searchWaste()" class="btn-primary text-white p-3 rounded-lg w-full sm:w-auto">Cercar</button>
+  </div>
+  <div id="searchSuggestions"></div>
+  <div id="searchResults" class="mt-6"></div>
+</section>

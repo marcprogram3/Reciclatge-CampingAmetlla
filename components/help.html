@@ -1,0 +1,28 @@
+<section class="help-section">
+  <h2 class="text-3xl md:text-4xl font-bold mb-8 text-center">Com ens pots ajudar?</h2>
+  <p class="text-center text-lg text-gray-700 mb-12 max-w-3xl mx-auto">
+    Consulta la guia oficial de reciclatge de l'Agència de Residus de Catalunya en l'idioma que prefereixis.
+  </p>
+
+  <div class="max-w-4xl mx-auto">
+    <!-- Selector d'idioma -->
+    <div class="mb-8 text-center">
+      <label for="language-select" class="text-lg font-medium mr-4">Selecciona l'idioma:</label>
+      <select id="language-select" class="px-6 py-3 border-2 border-[#1B5E20] rounded-full text-lg font-medium focus:outline-none focus:ring-4 focus:ring-[#1B5E20]/30 cursor-pointer">
+        <option value="catalan">Català</option>
+        <option value="castellano">Castellano</option>
+        <option value="english">English</option>
+        <option value="french">Français</option>
+      </select>
+    </div>
+
+    <!-- Imatge de la guia (canvia segons l'idioma) -->
+    <div class="text-center">
+      <img id="guide-image" 
+           src="assets/recycling-guide-catalan.jpg" 
+           alt="Guia de reciclatge" 
+           class="guide-large mx-auto cursor-pointer"
+           onclick="openModal(this.src, document.getElementById('language-select').options[document.getElementById('language-select').selectedIndex].text + ' - Guia de reciclatge')">
+    </div>
+  </div>
+</section>

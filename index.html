@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Guia de reciclatge del Camping Ametlla: informació professional i mapa interactiu per a una gestió sostenible dels residus.">
+  <meta name="author" content="Camping Ametlla">
+  <title>Reciclatge - Camping Ametlla</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen">
+  <!-- Inclou les seccions separades -->
+  <div id="header"></div>
+  <main class="container mx-auto py-16 px-6" style="margin-top: 100vh;">
+    <div id="home"></div>
+    <div id="search"></div>
+    <div id="map"></div>
+    <div id="help"></div>
+    <div id="process"></div>
+    <div id="contact"></div>
+  </main>
+  <div id="footer"></div>
+
+  <!-- Modal per ampliar imatges -->
+  <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50" onclick="closeModal(event)">
+    <div class="bg-white p-6 rounded-lg shadow-lg max-w-95vw w-95% relative" onclick="event.stopPropagation()">
+      <span class="close-modal text-[#1B5E20] text-3xl font-bold cursor-pointer absolute top-4 right-4" onclick="closeModal(event)">&times;</span>
+      <img id="modalImage" src="" alt="Imatge ampliada" class="max-w-[95%] h-auto mx-auto" style="opacity: 0;" onload="this.style.opacity = 1">
+      <p id="modalCaption" class="text-center text-[#2F4F2F] mt-4"></p>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+<script src="js/main.js"></script>
+<script>
+  // Carrega les seccions HTML separades
+  fetch('components/header.html').then(res => res.text()).then(data => document.getElementById('header').innerHTML = data);
+  fetch('components/home.html').then(res => res.text()).then(data => document.getElementById('home').innerHTML = data);
+  fetch('components/search.html').then(res => res.text()).then(data => document.getElementById('search').innerHTML = data);
+  fetch('components/map.html').then(res => res.text()).then(data => {
+    document.getElementById('map').innerHTML = data;
+    initMap(); // Inicialitza el mapa
+  });
+  fetch('components/help.html').then(res => res.text()).then(data => {
+    document.getElementById('help').innerHTML = data;
+    initLanguageSelector(); // Inicialitza el selector d'idioma
+  });
+  fetch('components/process.html').then(res => res.text()).then(data => document.getElementById('process').innerHTML = data);
+  fetch('components/contact.html').then(res => res.text()).then(data => document.getElementById('contact').innerHTML = data);
+  fetch('components/footer.html').then(res => res.text()).then(data => document.getElementById('footer').innerHTML = data);
+</script>
+</body>
+</html>
