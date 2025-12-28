@@ -103,7 +103,7 @@ h3 {
 /* Botons de navegació inicial - text blanc per contrast perfecte */
 .presentation .nav-buttons a {
   background: linear-gradient(135deg, #1B5E20, #2E7D32);
-  color: white !important; /* Blanc pur per contrast màxim */
+  color: white !important;
   padding: 1rem 2rem;
   border-radius: 50px;
   margin: 0 1rem;
@@ -275,10 +275,87 @@ footer {
   animation: fadeInUp 1s ease-out;
 }
 
-/* Responsiu */
-@media (max-width: 768px) {
-  h2 { font-size: 2rem; }
-  .presentation { padding: 2rem 1rem; }
-  .card { padding: 2rem; }
-  #map { min-height: 400px; }
+/* RESPONSIVITAT MILLORADA PER TOTS ELS DISPOSITIUS */
+
+/* Pantalles petites (mòbils) */
+@media (max-width: 640px) {
+  h2 {
+    font-size: 2rem;
+  }
+  h3 {
+    font-size: 1.6rem;
+  }
+  .presentation {
+    padding: 2rem 1rem;
+    margin: 2rem auto;
+  }
+  .presentation h2 {
+    font-size: 2.2rem;
+  }
+  .presentation img {
+    max-width: 250px;
+  }
+  .presentation .nav-buttons {
+    flex-direction: column;
+  }
+  .presentation .nav-buttons a {
+    margin: 0.5rem 0;
+    padding: 1rem 1.5rem;
+  }
+  .card {
+    padding: 2rem;
+  }
+  .search-container {
+    padding: 1.5rem;
+  }
+  #searchInput {
+    padding: 1rem;
+    font-size: 1rem;
+  }
+  #map {
+    height: 400px;
+  }
+  .help-section {
+    padding: 2rem 1rem;
+  }
+  #language-select {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+  }
+  .guide-large {
+    max-width: 100%;
+  }
+  .recycle-process-section {
+    padding: 2rem;
+  }
+  video {
+    width: 100%;
+  }
+  footer {
+    padding: 2rem;
+  }
+}
+
+/* Tauletes */
+@media (min-width: 641px) and (max-width: 1024px) {
+  h2 {
+    font-size: 2.3rem;
+  }
+  .presentation {
+    padding: 3rem 1.5rem;
+  }
+  #map {
+    height: 500px;
+  }
+  .help-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Ordinadors grans */
+@media (min-width: 1025px) {
+  .help-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
