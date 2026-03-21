@@ -1,102 +1,188 @@
+require('dotenv').config();
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fetch = require('node-fetch');
+const cors = require('cors');
 const app = express();
-const port = 3000;
 
-app.use(express.static(path.join(__dirname, '..')));
+const port = 5050;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
 
 app.get('/', (req, res) => {
-    res.send('Servidor en marxa');
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-const db = new sqlite3.Database('recycling.db', (err) => {
+const db = new sqlite3.Database(path.join(__dirname, 'recycling.db'), (err) => {
     if (err) {
-        console.error('Error connectant a la base de dades:', err.message);
+        console.error('❌ Error connectant a la base de dades:', err.message);
     } else {
-        console.log('Connectat a la base de dades recycling.db');
+        console.log('✅ Connectat a recycling.db');
         db.run(`
             CREATE TABLE IF NOT EXISTS wastes (
                 residu TEXT PRIMARY KEY,
                 contenidor TEXT,
                 descripcio TEXT,
-                normativa TEXT,
-                consells TEXT
+                consells TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
     }
 });
 
-// Ruta per la cerca amb Grok
-app.get('/grok-search', async (req, res) => {
-    const query = req.query.s;
-    if (!query) {
-        res.status(400).json({ error: 'Paràmetre de cerca requerit' });
-        return;
+// 🔍 Detecció senzilla d'idioma
+function detectarIdioma(consulta) {
+    const text = consulta.toLowerCase();
+    if (/hola|gracias|por favor|botella|lata|pilas|papel|vidrio/.test(text)) return 'castellano';
+    if (/hello|please|bottle|can|batteries|paper|glass/.test(text)) return 'english';
+    if (/bonjour|s'il vous plaît|bouteille|canette|piles|papier|verre/.test(text)) return 'french';
+    return 'catalan';
+}
+
+// 🧠 Ruta de cerca (ara només retorna informació útil)
+app.get('/search', async (req, res) => {
+    const searchTerm = req.query.s?.toLowerCase().trim();
+    if (!searchTerm) {
+        return res.status(400).json({ error: 'Paràmetre de cerca requerit' });
     }
-
-    const apiKey = "xai-675Lr0g2NQN5JQoRK1TNDtiC0lKe7loAPY96TNc28wwkrk1BvkyNqEXo68PjyGAI1wTDPvWxPhMxhB8v"; // La teva clau
-    const url = "https://api.x.ai/v1/chat/completions";
-
-    const requestBody = {
-        model: "grok-3",
-        messages: [
-            {
-                role: "system",
-                content: "Ets Grok, creat per xAI. Totes les teves respostes han de tractar-se com a consultes sobre gestió de residus. Proporciona consells clars i útils sobre on reciclar cada residu (contenidors com groc, blau, verd, marró, o punts específics com contenidors de piles), amb un to professional i genèric, sense citar lleis específiques. Si no coneixes el residu, suggereix consultar un punt verd."
-            },
-            {
-                role: "user",
-                content: `On s’ha de reciclar el residu "${query}"?`
-            }
-        ],
-        max_tokens: 150
-    };
 
     try {
-        console.log("Enviant sol·licitud a l'API amb query:", query);
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(requestBody)
+        // 1. Buscar a la base de dades
+        const dbResult = await buscarEnBD(searchTerm);
+        if (dbResult) {
+            return res.json({
+                message: formatMessage(dbResult.contenidor, dbResult.descripcio, dbResult.consells, 'catalan')
+            });
+        }
+
+        // 2. Si no està a la BD, consultar DeepSeek
+        const apiKey = process.env.DEEPSEEK_API_KEY;
+        if (!apiKey) throw new Error('API Key no configurada');
+
+        const idioma = detectarIdioma(searchTerm);
+        const deepseekResult = await consultarDeepSeek(searchTerm, apiKey, idioma);
+        
+        // Guardar a la BD per a properes consultes
+        await guardarEnBD(searchTerm, deepseekResult);
+
+        res.json({
+            message: deepseekResult.message
         });
 
-        console.log("Resposta de l'API:", response.status, response.statusText);
-        if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log("Dades rebudes de l'API:", data);
-        if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
-            throw new Error("Resposta de l'API invàlida o sense contingut.");
-        }
-
-        const result = data.choices[0].message.content;
-        res.json({ message: result });
     } catch (error) {
-        console.error("Error amb Grok:", error);
-        res.status(500).json({ error: error.message });
+        console.error('❌ Error:', error);
+        res.status(500).json({ error: 'Error processant la consulta' });
     }
 });
 
-app.get('/search', (req, res) => {
-    const searchTerm = req.query.s.toLowerCase();
-    db.all(`
-        SELECT * FROM wastes WHERE residu LIKE ? LIMIT 5
-    `, [`%${searchTerm}%`], (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
-        res.json(rows);
+function buscarEnBD(searchTerm) {
+    return new Promise((resolve, reject) => {
+        db.get(
+            'SELECT * FROM wastes WHERE residu = ? OR residu LIKE ? LIMIT 1',
+            [searchTerm, `%${searchTerm}%`],
+            (err, row) => (err ? reject(err) : resolve(row))
+        );
     });
-});
+}
+
+async function consultarDeepSeek(query, apiKey, idioma) {
+    const url = "https://api.deepseek.com/v1/chat/completions";
+
+    const systemMessages = {
+        catalan: `Ets un expert en reciclatge del Camping Ametlla. 
+Respon ÚNICAMENT amb aquest format:
+🗑️ **Contenidor**: [groc/blau/verd/marró/punt verd]
+📌 **Per què?**: [explicació breu]
+💡 **Consell**: [consell pràctic]
+
+Sense títols addicionals, sense salutacions. Només aquesta informació.`,
+        castellano: `Eres un experto en reciclaje del Camping Ametlla. 
+Responde ÚNICAMENT con este formato:
+🗑️ **Contenedor**: [amarillo/azul/verde/marrón/punto verde]
+📌 **¿Por qué?**: [explicación breve]
+💡 **Consejo**: [consejo práctico]
+
+Sin títulos adicionales, sin saludos. Solo esta información.`,
+        english: `You are a recycling expert at Camping Ametlla. 
+Respond ONLY with this format:
+🗑️ **Container**: [yellow/blue/green/brown/green point]
+📌 **Why?**: [brief explanation]
+💡 **Tip**: [practical tip]
+
+No extra titles, no greetings. Only this information.`,
+        french: `Vous êtes un expert en recyclage au Camping Ametlla. 
+Répondez UNIQUEMENT avec ce format:
+🗑️ **Conteneur**: [jaune/bleu/vert/marron/point vert]
+📌 **Pourquoi ?**: [explication brève]
+💡 **Conseil**: [conseil pratique]
+
+Pas de titres supplémentaires, pas de salutations. Seulement ces informations.`
+    };
+
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            model: "deepseek-chat",
+            messages: [
+                { role: "system", content: systemMessages[idioma] },
+                { role: "user", content: `On va aquest residu: "${query}"?` }
+            ],
+            max_tokens: 200,
+            temperature: 0.3
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(`DeepSeek API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+
+    // Extreure informació per guardar a la BD
+    const contenidor = content.match(/contenidor:\s*(.+)/i)?.[1]?.trim() || 
+                       content.match(/contenedor:\s*(.+)/i)?.[1]?.trim() ||
+                       content.match(/container:\s*(.+)/i)?.[1]?.trim() ||
+                       content.match(/conteneur:\s*(.+)/i)?.[1]?.trim() || 'No especificat';
+
+    return {
+        message: content,
+        contenidor: contenidor,
+        descripcio: content,
+        consells: content.match(/consell:\s*(.+)/i)?.[1]?.trim() || ''
+    };
+}
+
+function guardarEnBD(residu, data) {
+    return new Promise((resolve, reject) => {
+        db.run(
+            'INSERT OR REPLACE INTO wastes (residu, contenidor, descripcio, consells) VALUES (?, ?, ?, ?)',
+            [residu, data.contenidor || '', data.descripcio || '', data.consells || ''],
+            (err) => (err ? reject(err) : resolve())
+        );
+    });
+}
+
+// Formatar missatge des de BD (per si de cas)
+function formatMessage(contenidor, descripcio, consells, idioma) {
+    const texts = {
+        catalan: { container: '🗑️ **Contenidor**', why: '📌 **Per què?**', tip: '💡 **Consell**' },
+        castellano: { container: '🗑️ **Contenedor**', why: '📌 **¿Por qué?**', tip: '💡 **Consejo**' },
+        english: { container: '🗑️ **Container**', why: '📌 **Why?**', tip: '💡 **Tip**' },
+        french: { container: '🗑️ **Conteneur**', why: '📌 **Pourquoi ?**', tip: '💡 **Conseil**' }
+    };
+    const t = texts[idioma] || texts.catalan;
+    return `${t.container}: ${contenidor}\n\n${t.why}: ${descripcio}\n\n${t.tip}: ${consells || 'Separa correctament i ajuda a cuidar el medi ambient!'}`;
+}
 
 app.listen(port, () => {
-    console.log(`Servidor executant-se a http://localhost:${port}`);
+    console.log(`\n🌍 Servidor actiu → http://localhost:${port}`);
+    console.log(`🤖 DeepSeek respon en múltiples idiomes amb format professional\n`);
 });

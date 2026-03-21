@@ -1,9 +1,62 @@
-<section id="search" class="mb-8 card relative">
-  <h2 class="text-2xl font-semibold mb-6">Consulta el teu residu</h2>
-  <div class="search-container">
-    <input type="text" id="searchInput" placeholder="Ex.: ampolla de plàstic, piles, paper" class="p-3 border border-gray-300 rounded-lg w-full sm:w-2/3 focus:outline-none focus:ring-[#1B5E20]" oninput="showSuggestions()">
-    <button onclick="searchWaste()" class="btn-primary text-white p-3 rounded-lg w-full sm:w-auto">Cercar</button>
-  </div>
-  <div id="searchSuggestions"></div>
-  <div id="searchResults" class="mt-6"></div>
-</section>
+<div class="bg-[#E8F5E9] p-8 rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold text-[#1B5E20] mb-4">Consulta el teu residu</h2>
+    
+    <div class="flex flex-col md:flex-row gap-4">
+        <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="Ex: ampolla de vidre, piles, paper..." 
+            class="flex-1 p-3 border border-[#A5D6A7] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E7D32]"
+            autocomplete="off"
+        >
+        <button 
+            id="searchButton"
+            type="button"
+            class="bg-[#2E7D32] text-white px-6 py-3 rounded-lg hover:bg-[#1B5E20] transition-colors font-semibold"
+        >
+            Cercar
+        </button>
+    </div>
+    
+    <div id="searchSuggestions" class="absolute z-10 bg-white border border-gray-300 rounded-lg mt-1 hidden"></div>
+    <div id="searchResults" class="mt-6"></div>
+</div>
+
+<script>
+    // Aquest script s'executa QUAN el component es carrega
+    (function() {
+        console.log("🔧 Inicialitzant component search.html");
+        
+        // Esperar que el DOM estigui llest
+        setTimeout(function() {
+            const searchButton = document.getElementById('searchButton');
+            const searchInput = document.getElementById('searchInput');
+            
+            if (searchButton) {
+                // Eliminar event listeners antics
+                const newButton = searchButton.cloneNode(true);
+                searchButton.parentNode.replaceChild(newButton, searchButton);
+                
+                newButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (window.searchWaste) {
+                        window.searchWaste();
+                    }
+                });
+            }
+            
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (window.searchWaste) {
+                            window.searchWaste();
+                        }
+                    }
+                });
+            }
+        }, 100);
+    })();
+</script>
